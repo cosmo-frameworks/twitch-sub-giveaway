@@ -251,6 +251,36 @@ describe('POST /api/auth/reauthorize', () => {
     expect(lanzado).toBe(true)
     await withAuth.close()
   })
+
+  /*
+   * Sin secreto este flujo no puede ni empezar: `createOAuthFlow` lanza en su
+   * primera línea. Antes se llamaba con `void` y se respondía 200 igualmente,
+   * así que la aplicación instalada decía "se ha abierto el navegador" y no se
+   * abría nada — el error moría en una promesa que nadie miraba.
+   */
+  it('400 en la aplicación instalada, que no lleva client secret', async () => {
+    let lanzado = false
+    const sinSecreto = await createApiServer({
+      db: handle.db,
+      config: parseConfig({ TWITCH_CLIENT_ID: 'client-id' }, { defaultDataDir: dataDir }),
+      authStatus,
+      events,
+      eventSubConnected: () => true,
+      activeGiveawayId: () => giveawayId,
+      reauthorize: async () => {
+        lanzado = true
+      },
+      panelDist: null,
+    })
+
+    const res = await sinSecreto.inject({ method: 'POST', url: '/api/auth/reauthorize' })
+
+    expect(res.statusCode).toBe(400)
+    expect((res.json() as { error: string }).error).toMatch(/código de activación/)
+    expect(lanzado).toBe(false)
+    
+    await sinSecreto.close()
+  })
 })
 
 describe('rutas desconocidas', () => {

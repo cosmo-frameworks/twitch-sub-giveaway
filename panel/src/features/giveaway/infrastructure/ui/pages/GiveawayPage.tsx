@@ -83,6 +83,13 @@ export const GiveawayPage: React.FC = () => {
 
   const { streamState } = usePanelStream(giveawayId, onStreamEvent)
 
+  const deviceWaiting = statusState.status?.device.state === 'waiting'
+  useEffect(() => {
+    if (!deviceWaiting) return
+    const timer = window.setInterval(() => void getStatus(), 2000)
+    return () => window.clearInterval(timer)
+  }, [deviceWaiting, getStatus])
+
   // El resaltado de "acaba de entrar" dura lo justo para que se vea.
   useEffect(() => {
     if (!justAdded) return
@@ -284,7 +291,7 @@ export const GiveawayPage: React.FC = () => {
         </div>
       </header>
 
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
         {giveawayState.loading && giveawayState.participants.length === 0 && (
           <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {Array.from({ length: 5 }, (_, i) => (
@@ -336,6 +343,38 @@ export const GiveawayPage: React.FC = () => {
             />
           ))}
         </ul>
+
+        {settingsOpen && !obsMode && giveawayState.giveaway && (
+          <GiveawayOperations
+            giveaway={giveawayState.giveaway}
+            addingManual={giveawayState.addingManual}
+            openingGiveaway={giveawayState.openingGiveaway}
+            notice={giveawayState.notice}
+            onAddManual={(input) => void giveawayState.addManualEntries(input)}
+            onOpenGiveaway={(name) => {
+              void giveawayState.openGiveaway(name).then((ok) => {
+                if (ok) void getStatus()
+              })
+            }}
+            onCloseGiveaway={() => void giveawayState.closeGiveaway()}
+            onDismissNotice={giveawayState.dismissNotice}
+          />
+        )}
+
+        {settingsOpen && !obsMode && statusState.status && (
+          <StatusPanel
+            status={statusState.status}
+            device={statusState.status.device}
+            connecting={statusState.connecting}
+            saving={statusState.saving}
+            notice={statusState.notice}
+            error={statusState.error}
+            onConnect={() => void statusState.startDeviceConnect()}
+            onCancelConnect={() => void statusState.cancelDeviceConnect()}
+            onSaveDbPath={(path) => void statusState.saveDbPath(path)}
+            onDismissNotice={statusState.dismissNotice}
+          />
+        )}
       </div>
 
       {giveawayState.lastDraw && (
@@ -348,38 +387,6 @@ export const GiveawayPage: React.FC = () => {
           onVerify={(seed) => void giveawayState.verifyDraw(seed)}
           onArchive={() => void archiveAndRestart()}
           onClose={giveawayState.dismissDraw}
-        />
-      )}
-
-      {settingsOpen && !obsMode && giveawayState.giveaway && (
-        <GiveawayOperations
-          giveaway={giveawayState.giveaway}
-          addingManual={giveawayState.addingManual}
-          openingGiveaway={giveawayState.openingGiveaway}
-          notice={giveawayState.notice}
-          onAddManual={(input) => void giveawayState.addManualEntries(input)}
-          onOpenGiveaway={(name) => {
-            // Se vuelve a pedir el estado: el sorteo activo es otro y el tablero
-            // tiene que cambiar sin reiniciar.
-            void giveawayState.openGiveaway(name).then((ok) => {
-              if (ok) void getStatus()
-            })
-          }}
-          onCloseGiveaway={() => void giveawayState.closeGiveaway()}
-          onDismissNotice={giveawayState.dismissNotice}
-        />
-      )}
-
-      {settingsOpen && !obsMode && statusState.status && (
-        <StatusPanel
-          status={statusState.status}
-          reauthorizing={statusState.reauthorizing}
-          saving={statusState.saving}
-          notice={statusState.notice}
-          error={statusState.error}
-          onReauthorize={() => void statusState.reauthorize()}
-          onSaveDbPath={(path) => void statusState.saveDbPath(path)}
-          onDismissNotice={statusState.dismissNotice}
         />
       )}
 

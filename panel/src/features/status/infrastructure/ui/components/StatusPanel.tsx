@@ -5,7 +5,7 @@ import { Field } from '@shared/components/field'
 
 import { isDesktop, pickDbFolder } from '@lib/desktop'
 
-import type { PanelStatusI } from '@status/domain/models/StatusI'
+import type { DeviceStateT, PanelStatusI } from '@status/domain/models/StatusI'
 
 const DB_SOURCE_LABEL: Record<PanelStatusI['storage']['dbSource'], string> = {
   default: 'carpeta por defecto',
@@ -15,11 +15,13 @@ const DB_SOURCE_LABEL: Record<PanelStatusI['storage']['dbSource'], string> = {
 
 export interface StatusPanelPropsI {
   status: PanelStatusI
-  reauthorizing: boolean
+  device: DeviceStateT
+  connecting: boolean
   saving: boolean
   notice: string | null
   error: string | null
-  onReauthorize: () => void
+  onConnect: () => void
+  onCancelConnect: () => void
   onSaveDbPath: (dbPath: string | null) => void
   onDismissNotice: () => void
 }
@@ -39,11 +41,13 @@ const explain: React.CSSProperties = {
 
 export const StatusPanel: React.FC<StatusPanelPropsI> = ({
   status,
-  reauthorizing,
+  device,
+  connecting,
   saving,
   notice,
   error,
-  onReauthorize,
+  onConnect,
+  onCancelConnect,
   onSaveDbPath,
   onDismissNotice,
 }) => {
@@ -65,15 +69,55 @@ export const StatusPanel: React.FC<StatusPanelPropsI> = ({
         <div style={heading}>Conexión con Twitch</div>
         <p style={explain}>{status.auth.detail}</p>
 
-        {authNeedsAction && (
-          <Button
-            tone="alert"
-            onClick={onReauthorize}
-            disabled={reauthorizing}
-            style={{ marginTop: 'calc(var(--step) * 3)' }}
+        {device.state === 'waiting' ? (
+          <div style={{ marginTop: 'calc(var(--step) * 3)' }}>
+            <p style={{ ...explain, marginBottom: 'calc(var(--step) * 2)' }}>
+              Entra en <strong style={{ color: 'var(--paper)' }}>twitch.tv/activate</strong> y
+              escribe este código:
+            </p>
+            <p
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'var(--t-display)',
+                letterSpacing: '0.12em',
+                fontVariantNumeric: 'slashed-zero',
+                margin: '0 0 calc(var(--step) * 3)',
+              }}
+            >
+              {device.userCode}
+            </p>
+            <div style={{ display: 'flex', gap: 'calc(var(--step) * 2)', flexWrap: 'wrap' }}>
+              <a
+                className="btn btn--primary"
+                href={device.verificationUri}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Abrir twitch.tv/activate
+              </a>
+              <Button onClick={onCancelConnect}>Cancelar</Button>
+            </div>
+          </div>
+        ) : (
+          authNeedsAction && (
+            <Button
+              tone="alert"
+              onClick={onConnect}
+              disabled={connecting}
+              style={{ marginTop: 'calc(var(--step) * 3)' }}
+            >
+              {connecting ? 'Pidiendo código…' : 'Volver a conectar con Twitch'}
+            </Button>
+          )
+        )}
+
+        {device.state === 'error' && (
+          <p
+            role="status"
+            style={{ ...explain, color: 'var(--alert)', marginTop: 'calc(var(--step) * 3)' }}
           >
-            {reauthorizing ? 'Abriendo el navegador…' : 'Conectar con Twitch'}
-          </Button>
+            {device.message}
+          </p>
         )}
       </div>
 

@@ -131,8 +131,19 @@ export async function createApiServer(options: ApiServerOptions): Promise<Fastif
     if (!options.reauthorize) {
       return await reply.code(501).send({ ok: false, error: 'No disponible en este proceso.' })
     }
-    // Sin esperar: autorizar en el navegador puede llevar minutos.
-    void options.reauthorize()
+
+    if (!options.config.twitch.clientSecret) {
+      return await reply.code(400).send({
+        ok: false,
+        error:
+          'Esta aplicación no lleva client secret. Vuelve a conectar desde Ajustes, ' +
+          'que usa el código de activación de Twitch.',
+      })
+    }
+
+    void options.reauthorize().catch((error: unknown) => {
+      app.log.error(`la re-autorización falló: ${(error as Error).message}`)
+    })
     return { ok: true }
   })
 
