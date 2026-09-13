@@ -1,0 +1,9 @@
+packages:
+  - '.'
+  - 'panel'
+
+allowBuilds:
+  esbuild: true
+  better-sqlite3: true
+  electron: true
+  electron-winstaller: true

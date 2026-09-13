@@ -1,0 +1,2 @@
+ALTER TABLE `entries` ADD `reconciled` integer DEFAULT false NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX `entries_reconciled_unique` ON `entries` (`giveaway_id`,`platform`,`user_id`,`source`) WHERE "entries"."reconciled" = 1;

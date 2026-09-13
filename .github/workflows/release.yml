@@ -1,0 +1,52 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Comprobar que la etiqueta y package.json dicen lo mismo
+        shell: bash
+        run: |
+          etiqueta="${GITHUB_REF_NAME#v}"
+          version="$(node -p "require('./package.json').version")"
+          if [ "$etiqueta" != "$version" ]; then
+            echo "::error::La etiqueta es $GITHUB_REF_NAME pero package.json dice $version."
+            echo "El instalador se llamaría $version y nadie recibiría la actualización."
+            echo "Sube la versión en package.json, haz commit, y vuelve a etiquetar."
+            exit 1
+          fi
+          echo "Etiqueta $GITHUB_REF_NAME y versión $version coinciden."
+
+      - name: Comprobaciones
+        run: |
+          pnpm test
+          pnpm typecheck
+          pnpm lint
+
+      - name: Construir y publicar
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm desktop:release
+
+      - name: Qué se ha publicado
+        shell: bash
+        run: ls -la release/*.exe release/latest.yml

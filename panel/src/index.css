@@ -1,0 +1,305 @@
+/*
+ * Se mira de reojo desde una segunda pantalla y se captura en OBS: manda el
+ * contraste y el tamaño, no la densidad. El papel de las papeletas es lo único
+ * cálido; lo demás está callado para que se lean ellas.
+ */
+
+/*
+ * Las tipografías viajan dentro de la aplicación (51 KB): con `local()` a secas
+ * solo cargaban si estaban instaladas, y no lo están en ningún Windows. Esto
+ * tiene que funcionar sin internet.
+ *
+ * `block` y no `swap`: el fichero es local, y `swap` daría un parpadeo.
+ */
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('./assets/fonts/instrument-serif-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Instrument Sans';
+  font-style: normal;
+  /* Es variable: un solo fichero cubre de 400 a 600. */
+  font-weight: 400 600;
+  font-display: block;
+  src: url('./assets/fonts/instrument-sans-latin.woff2') format('woff2');
+}
+
+:root {
+  /* Tinta azulada: no es un negro neutro, tiene fondo de noche. */
+  --ink: #10131c;
+  --ink-raised: #171b27;
+  --ink-sunken: #0c0f16;
+  --rule: #262c3d;
+  --rule-soft: #1e2432;
+
+  /* El papel de la papeleta. Lo único cálido del tablero. */
+  --paper: #e8dcc0;
+  --paper-dim: #9a9484;
+  --paper-faint: #5d6070;
+
+  /* Estados: utilitarios, no decorativos. Siempre punto + palabra. */
+  --live: #46d39a;
+  --warn: #f2b85c;
+  --alert: #ff6b5e;
+
+  --font-display: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --font-ui: 'Instrument Sans', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  --t-micro: 12px;
+  --t-small: 13px;
+  --t-body: 15px;
+  --t-lead: 17px;
+  --t-title: 22px;
+  --t-display: 32px;
+
+  --step: 4px;
+  --radius: 2px;
+
+  /* Alto único de todos los controles: es lo que alinea una barra de acciones. */
+  --control: 32px;
+  --control-sm: 26px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+input {
+  font: inherit;
+}
+
+/* El foco tiene que verse: esto se usa con teclado mientras se juega. */
+:focus-visible {
+  outline: 2px solid var(--paper);
+  outline-offset: 2px;
+}
+
+/*
+ * OJO: no añadas `scrollbar-color` ni `scrollbar-width`. En Chromium moderno
+ * las propiedades estándar GANAN a estos pseudoelementos, así que ponerlas "por
+ * compatibilidad" devuelve la barra del sistema. Comprobado: 11 px con esto,
+ * 15 px en cuanto se añade la estándar.
+ *
+ * El pulgar se ve de 5 px pero se agarra con 11: el borde transparente con
+ * `background-clip` ensancha la zona de arrastre sin engordarlo.
+ */
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--rule);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: var(--radius);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--paper-faint);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--paper-dim);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/*
+ * En clases y no en estilos en línea: un estilo en línea no puede tener
+ * `:hover` ni `:disabled`, y un botón que no responde al ratón se siente roto.
+ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--step) * 2);
+  height: var(--control);
+  padding: 0 14px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--paper);
+  font: inherit;
+  font-size: var(--t-small);
+  line-height: 1;
+  white-space: nowrap;
+  /* Las descargas son enlaces de verdad con esta misma pinta: sin esto salen
+     subrayadas y rompen la fila. */
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.btn--sm {
+  height: var(--control-sm);
+  padding: 0 10px;
+  font-size: var(--t-micro);
+}
+
+/* Solo para la acción única de una pantalla vacía, como conectar el canal:
+   ahí un control de 32 px se pierde en medio de tanto aire. */
+.btn--lg {
+  height: 42px;
+  padding: 0 22px;
+  font-size: var(--t-lead);
+}
+
+/*
+ * El crema es el único color fuerte del tablero y se gasta en un sitio: la
+ * acción que importa. Si lo llevan cuatro botones, deja de señalar nada.
+ */
+.btn--primary {
+  background: var(--paper);
+  border-color: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: #f3e9d3;
+  border-color: #f3e9d3;
+}
+
+.btn--primary:active:not(:disabled) {
+  background: #d8ccb0;
+  border-color: #d8ccb0;
+}
+
+.btn--quiet {
+  border-color: var(--rule);
+  color: var(--paper-dim);
+}
+
+.btn--quiet:hover:not(:disabled) {
+  border-color: var(--paper-faint);
+  color: var(--paper);
+}
+
+.btn--quiet:active:not(:disabled) {
+  background: var(--ink-raised);
+}
+
+/* Para lo que pide atención o deshace algo: nunca relleno, solo contorno. */
+.btn--alert {
+  border-color: color-mix(in srgb, var(--alert) 55%, transparent);
+  color: var(--alert);
+}
+
+.btn--alert:hover:not(:disabled) {
+  border-color: var(--alert);
+  background: color-mix(in srgb, var(--alert) 12%, transparent);
+}
+
+.btn--ghost {
+  color: var(--paper-dim);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: var(--ink-raised);
+  color: var(--paper);
+}
+
+/* Marca un modo encendido, como el de OBS: el botón se queda hundido. */
+.btn--on {
+  background: var(--ink-raised);
+  border-color: var(--paper-faint);
+  color: var(--paper);
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.field {
+  height: var(--control);
+  padding: 0 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--rule);
+  background: var(--ink-raised);
+  color: var(--paper);
+  font: inherit;
+  font-size: var(--t-small);
+  transition: border-color 120ms ease;
+}
+
+.field::placeholder {
+  color: var(--paper-faint);
+}
+
+.field:hover {
+  border-color: var(--paper-faint);
+}
+
+.field:focus {
+  border-color: var(--paper-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/*
+ * CUIDADO: `app-region` SE HEREDA. Cualquier hijo de `.titlebar` colocado
+ * encima de los botones —una capa absoluta para centrar algo, por ejemplo—
+ * hereda `drag` y se come los clics: la zona de arrastre se calcula por
+ * geometría y `pointer-events: none` no le quita ni un píxel.
+ *
+ * Con prefijo y sin él porque Chromium solo entendió la forma prefijada
+ * durante años.
+ */
+.titlebar {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+/* Dentro de una zona de arrastre no llega ni un clic: hay que exceptuarlos. */
+.titlebar__controls {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}

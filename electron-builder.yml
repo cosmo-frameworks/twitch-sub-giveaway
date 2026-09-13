@@ -1,0 +1,42 @@
+appId: com.sorteos.twitch
+productName: Sorteo de subs
+copyright: ""
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - from: dist-desktop
+    to: .
+    filter: ['**/*']
+
+asarUnpack:
+  - '**/node_modules/better-sqlite3/**'
+
+extraMetadata:
+  main: main.js
+
+npmRebuild: false
+
+publish:
+  provider: github
+  owner: cosmo-frameworks
+  repo: twitch-sub-giveaway
+  releaseType: release
+
+win:
+  icon: build/icon.ico
+
+  verifyUpdateCodeSignature: false
+
+  target:
+    - target: nsis
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: Sorteo de subs

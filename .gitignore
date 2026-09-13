@@ -1,0 +1,19 @@
+node_modules/
+dist/
+coverage/
+
+# Secretos y estado local
+.env
+.env.local
+tokens.json
+# datos locales (por si se usa TWITCH_SORTEOS_DATA_DIR)
+data/
+.dev-data/
+backups/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.log
+dist-desktop/
+release/
