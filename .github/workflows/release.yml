@@ -12,6 +12,9 @@ jobs:
   windows:
     runs-on: windows-latest
 
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -42,11 +45,53 @@ jobs:
           pnpm typecheck
           pnpm lint
 
-      - name: Construir y publicar
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # El borrador se crea AQUÍ, antes de construir.
+      #
+      # electron-builder sube los artefactos en paralelo y cada subida crea la
+      # release si no la encuentra. En la v0.1.0 dos llegaron a la vez, no
+      # existía ninguna, y cada una creó la suya: acabaron dos releases con los
+      # ficheros repartidos, y la que se publicó se quedó sin `latest.yml`.
+      #
+      # Existiendo de antemano, todas las subidas encuentran la misma.
+      - name: Preparar la release en borrador
+        shell: bash
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Ya existe $GITHUB_REF_NAME; se reutiliza."
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --draft \
+              --title "$GITHUB_REF_NAME" \
+              --notes "Instalador para Windows. La aplicación ya instalada se actualiza sola."
+          fi
+
+      - name: Construir y subir
         run: pnpm desktop:release
 
-      - name: Qué se ha publicado
+      # Una release sin `latest.yml` no actualiza a nadie, y falla en silencio:
+      # el actualizador simplemente no encuentra versión nueva. Se comprueba
+      # antes de publicar, que es cuando todavía se puede arreglar.
+      - name: Comprobar que están los tres ficheros
         shell: bash
-        run: ls -la release/*.exe release/latest.yml
+        run: |
+          assets="$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')"
+          echo "$assets"
+
+          for necesario in "latest.yml" ".exe" ".exe.blockmap"; do
+            if ! echo "$assets" | grep -q -- "$necesario"; then
+              echo "::error::Falta $necesario en la release. No se publica."
+              exit 1
+            fi
+          done
+
+          # Dos releases con la misma versión significa que la carrera volvió.
+          cuantas="$(gh release list --repo "$GITHUB_REPOSITORY" --json tagName --jq "[.[] | select(.tagName == \"$GITHUB_REF_NAME\")] | length")"
+          if [ "$cuantas" != "1" ]; then
+            echo "::error::Hay $cuantas releases para $GITHUB_REF_NAME. Debería haber una."
+            exit 1
+          fi
+
+      - name: Publicar
+        shell: bash
+        run: gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false

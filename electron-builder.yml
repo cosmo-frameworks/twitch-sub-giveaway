@@ -23,7 +23,13 @@ publish:
   provider: github
   owner: cosmo-frameworks
   repo: twitch-sub-giveaway
-  releaseType: release
+  # Borrador a propósito: electron-builder sube los artefactos en paralelo y cada
+  # subida crea la release si no la encuentra. Con dos llegando a la vez salen
+  # dos releases y los ficheros repartidos entre ellas — pasó en la v0.1.0.
+  #
+  # El workflow crea el borrador ANTES de construir y lo publica al final, así
+  # que aquí electron-builder solo sube: nunca crea ni publica nada.
+  releaseType: draft
 
 win:
   icon: build/icon.ico
